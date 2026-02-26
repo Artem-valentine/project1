@@ -89,19 +89,65 @@
       gap: 12px;
     }
 
-    #slideImage{
+    /* Контейнер для 1–3 фото */
+    .media{
       width: 100%;
-      max-width: 380px;
+      max-width: 420px;
+
+      max-height: 52dvh;
+      max-height: calc(var(--vh, 1vh) * 52);
+
+      display: grid;
+      gap: 8px;
+      align-items: center;
+      justify-items: center;
+
+      transition: opacity .45s ease;
+      opacity: 1;
+    }
+    .media.fade{ opacity: 0; }
+
+    .media img{
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius);
+      object-fit: cover;
+      box-shadow: var(--shadow);
+      background: rgba(255,255,255,.08);
+      display:block;
+    }
+
+    /* 1 фото */
+    .media.count-1{
+      grid-template-columns: 1fr;
+    }
+    .media.count-1 img{
       max-height: 52dvh;
       max-height: calc(var(--vh, 1vh) * 52);
       object-fit: contain;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      transition: opacity .45s ease;
-      opacity: 1;
-      background: rgba(255,255,255,.08);
     }
-    #slideImage.fade{ opacity: 0; }
+
+    /* 2 фото */
+    .media.count-2{
+      grid-template-columns: 1fr 1fr;
+    }
+    .media.count-2 img{
+      aspect-ratio: 1 / 1;
+    }
+
+    /* 3 фото */
+    .media.count-3{
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+    .media.count-3 img:nth-child(1){
+      grid-column: 1 / -1;
+      aspect-ratio: 16 / 9;
+    }
+    .media.count-3 img:nth-child(2),
+    .media.count-3 img:nth-child(3){
+      aspect-ratio: 1 / 1;
+    }
 
     .text{
       font-size: 18px;
@@ -120,14 +166,14 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      z-index: 2;           /* выше карточки */
-      pointer-events: none; /* чтобы не мешал кликам */
+      z-index: 2;
+      pointer-events: none;
       display: none;
     }
     #fxCanvas.show{ display:block; }
 
     @media (prefers-reduced-motion: reduce){
-      #slideImage{ transition:none; }
+      .media{ transition:none; }
       #fxCanvas{ display:none !important; }
     }
   </style>
@@ -135,7 +181,6 @@
 
 <body>
   <audio id="music" src="music.mp3" preload="auto" playsinline></audio>
-
   <canvas id="fxCanvas"></canvas>
 
   <!-- START -->
@@ -151,7 +196,7 @@
   <!-- SLIDES -->
   <section class="screen hidden" id="slideScreen">
     <div id="slideWrap">
-      <img id="slideImage" alt="" />
+      <div id="slideMedia" class="media count-1" aria-label="Фотографии слайда"></div>
       <div class="text" id="slideText"></div>
       <div class="meta" id="progress"></div>
 
@@ -162,7 +207,7 @@
   <!-- FINAL -->
   <section class="screen hidden" id="finalScreen">
     <div class="card">
-      <h2>С ДР 🎉</h2>
+      <h2>С С Днем Рождения любимая❤️🎂🥳😘 </h2>
       <p style="margin-top:10px;">Пусть всё будет так, как ты мечтаешь</p>
     </div>
   </section>
@@ -177,14 +222,22 @@
     window.addEventListener('resize', setVh);
     window.addEventListener('orientationchange', setVh);
 
-    // === Слайды ===
+    // === Слайды: в каждом слайде imgs: [1..3 фото] ===
     const slides = [
-      { img: "images/photo1.jpg", text: "С днём рождения!" },
-      { img: "images/photo2.jpg", text: "Пусть этот год будет счастливым" },
-      { img: "images/photo3.jpg", text: "И пусть рядом будут любимые люди" },
-      { img: "images/photo4.jpg", text: "Ты — невероятная/невероятный" },
-      { img: "images/photo5.jpg", text: "Обнимаю крепко" },
-      { img: "images/photo6.jpg", text: "И желаю самого лучшего" }
+      { imgs: ["images/photo1.jpg"], text: "Виделись даже тогда, когда это было сложно" },
+      { imgs: ["images/photo2.jpg"], text: "Наша первая совместная поездка на море" },
+      { imgs: ["images/photo3.jpg","images/photo3.1.jpg"], text: "Наш день❤️" },
+      { imgs: ["images/photo4.jpg"], text: "Сбылась мечта маленькой Юли, побывать в Московском Диснейленде 😁" },
+      { imgs: ["images/photo8.jpg"], text: "Неважно где путешествовать, главное с тобой ❤️" },
+      { imgs: ["images/photo9.jpg","images/photo9.1.jpg","images/photo9.2.jpg"], text: "Дождалась😄🗺️🏖️🛳️" },
+      { imgs: ["images/photo5.jpg"], text: "Твой лучший Новый Год🎇🍾" },
+      { imgs: ["images/photo6.jpg","images/photo6.1.jpg"], text: "Самый лучший момент в нашей жизни 🤰👩‍❤️‍👨" },
+      { imgs: ["images/photo7.jpg","images/photo7.1.jpg"], text: "Второй твой лучший Новый Год😃👶" },
+
+      // пример ещё:
+      // { imgs: ["images/a.jpg"], text: "..." },
+      // { imgs: ["images/b.jpg","images/c.jpg"], text: "..." },
+      // { imgs: ["images/d.jpg","images/e.jpg","images/f.jpg"], text: "..." },
     ];
 
     // === Элементы ===
@@ -197,7 +250,7 @@
     const startBtn = document.getElementById("startBtn");
     const hint = document.getElementById("hint");
 
-    const slideImage = document.getElementById("slideImage");
+    const slideMedia = document.getElementById("slideMedia");
     const slideText = document.getElementById("slideText");
     const progress = document.getElementById("progress");
 
@@ -233,11 +286,12 @@
     }
 
     async function preloadSlides(){
-      const tasks = slides.map(s => new Promise(res => {
+      const all = slides.flatMap(s => s.imgs);
+      const tasks = all.map(src => new Promise(res => {
         const im = new Image();
         im.onload = () => res(true);
         im.onerror = () => res(false);
-        im.src = s.img;
+        im.src = src;
       }));
       await Promise.all(tasks);
     }
@@ -246,20 +300,26 @@
       const s = slides[i];
       progress.textContent = `${i+1} / ${slides.length}`;
 
-      slideImage.classList.add("fade");
-      setTimeout(() => {
-        slideImage.alt = s.text || "";
-        slideText.textContent = s.text || "";
-        slideImage.src = s.img;
+      slideMedia.classList.add("fade");
 
-        let done = false;
-        const finish = () => {
-          if (done) return;
-          done = true;
-          slideImage.classList.remove("fade");
-        };
-        slideImage.onload = finish;
-        setTimeout(finish, 600);
+      setTimeout(() => {
+        slideText.textContent = s.text || "";
+
+        slideMedia.innerHTML = "";
+
+        slideMedia.classList.remove("count-1","count-2","count-3");
+        slideMedia.classList.add(`count-${Math.min(3, s.imgs.length)}`);
+
+        s.imgs.slice(0,3).forEach((src, idx) => {
+          const img = document.createElement("img");
+          img.src = src;
+          img.alt = (s.text ? s.text + " " : "") + (idx+1);
+          img.decoding = "async";
+          img.loading = "eager";
+          slideMedia.appendChild(img);
+        });
+
+        setTimeout(() => slideMedia.classList.remove("fade"), 80);
       }, 220);
     }
 
@@ -277,7 +337,6 @@
       if (timer) clearTimeout(timer);
       hide(slideScreen);
       show(finalScreen);
-
       if (!reduceMotion) startFinalFX();
     }
 
@@ -336,7 +395,6 @@
 
       function rand(min, max){ return Math.random() * (max - min) + min; }
 
-      // Конфетти
       function spawnConfetti(count = 140){
         for (let i=0;i<count;i++){
           confetti.push({
@@ -353,7 +411,6 @@
         }
       }
 
-      // Салют: взрыв искр
       function spawnFirework(){
         const cx = rand(w*0.18, w*0.82);
         const cy = rand(h*0.12, h*0.45);
@@ -386,7 +443,6 @@
 
         ctx.clearRect(0,0,w,h);
 
-        // Конфетти
         for (let i = confetti.length - 1; i >= 0; i--){
           const p = confetti[i];
           p.x += p.vx * dt * 0.06;
@@ -394,7 +450,6 @@
           p.rot += p.vr * dt * 0.06;
           p.life -= dt * 0.06;
 
-          // лёгкий "ветер"
           p.vx += Math.sin((t/1000) + p.y*0.01) * 0.002;
 
           ctx.save();
@@ -408,7 +463,6 @@
           if (p.y > h + 30 || p.life <= 0) confetti.splice(i, 1);
         }
 
-        // Салют (искры)
         for (let i = sparks.length - 1; i >= 0; i--){
           const s = sparks[i];
           s.vy += s.g * dt * 0.06;
@@ -427,18 +481,14 @@
 
         ctx.globalAlpha = 1;
 
-        // запуск салюта каждые ~900мс первые 7 секунд
         if (t - start < 7000 && t - lastFirework > 900){
           lastFirework = t;
           spawnFirework();
         }
-
-        // подсыпать конфетти первые 6 секунд
         if (t - start < 6000 && confetti.length < 220){
           spawnConfetti(18);
         }
 
-        // остановка через 10 секунд (оставим немного конфетти)
         if (t - start < 10000 || confetti.length > 0 || sparks.length > 0){
           requestAnimationFrame(tick);
         } else {
