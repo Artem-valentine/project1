@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>С ДР 🎉</title>
+
+  <style>
+    :root{
+      --shadow: 0 12px 34px rgba(0,0,0,.32);
+      --radius: 18px;
+    }
+
+    *{ margin:0; padding:0; box-sizing:border-box; }
+    html, body { height: 100%; }
+
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: #fff;
+      overflow: hidden;
+      background: url("bg.jpg") center / cover no-repeat fixed;
+    }
+
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.35);
+      z-index: 0;
+    }
+
+    .screen{
+      position: fixed;
+      inset: 0;
+      height: 100dvh;
+      height: calc(var(--vh, 1vh) * 100);
+
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+
+      padding:
+        max(18px, env(safe-area-inset-top))
+        16px
+        max(22px, env(safe-area-inset-bottom));
+
+      z-index: 1;
+      gap: 12px;
+      overflow: hidden;
+    }
+    .hidden{ display:none !important; }
+
+    .card{
+      width: min(560px, 92vw);
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1{ font-size: 28px; line-height: 1.15; }
+    h2{ font-size: 34px; line-height: 1.1; letter-spacing: .5px; }
+    p{ line-height: 1.35; opacity: .95; }
+
+    button{
+      margin-top: 12px;
+      padding: 14px 28px;
+      font-size: 16px;
+      border: none;
+      border-radius: 999px;
+      background: #fff;
+      color: #111;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(0,0,0,.22);
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:active{ transform: translateY(1px); }
+
+    #slideWrap{
+      width: min(560px, 92vw);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap: 12px;
+    }
+
+    #slideImage{
+      width: 100%;
+      max-width: 380px;
+      max-height: 52dvh;
+      max-height: calc(var(--vh, 1vh) * 52);
+      object-fit: contain;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      transition: opacity .45s ease;
+      opacity: 1;
+      background: rgba(255,255,255,.08);
+    }
+    #slideImage.fade{ opacity: 0; }
+
+    .text{
+      font-size: 18px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.14);
+      width: 100%;
+    }
+
+    .meta{ opacity: .85; font-size: 14px; }
+
+    /* Canvas поверх финала */
+    #fxCanvas{
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;           /* выше карточки */
+      pointer-events: none; /* чтобы не мешал кликам */
+      display: none;
+    }
+    #fxCanvas.show{ display:block; }
+
+    @media (prefers-reduced-motion: reduce){
+      #slideImage{ transition:none; }
+      #fxCanvas{ display:none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <audio id="music" src="music.mp3" preload="auto" playsinline></audio>
+
+  <canvas id="fxCanvas"></canvas>
+
+  <!-- START -->
+  <section class="screen" id="startScreen">
+    <div class="card">
+      <h1>Открытка 🎁</h1>
+      <p style="margin-top:10px;">Нажми, чтобы включить музыку и начать</p>
+      <button id="startBtn" aria-label="Включить и начать">▶ Включить</button>
+      <p class="meta" id="hint" style="margin-top:10px;"></p>
+    </div>
+  </section>
+
+  <!-- SLIDES -->
+  <section class="screen hidden" id="slideScreen">
+    <div id="slideWrap">
+      <img id="slideImage" alt="" />
+      <div class="text" id="slideText"></div>
+      <div class="meta" id="progress"></div>
+
+      <button id="toggleSoundBtn" aria-label="Включить или выключить звук">🔊 Звук</button>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section class="screen hidden" id="finalScreen">
+    <div class="card">
+      <h2>С ДР 🎉</h2>
+      <p style="margin-top:10px;">Пусть всё будет так, как ты мечтаешь</p>
+    </div>
+  </section>
+
+  <script>
+    // фикс высоты viewport для iOS/Android
+    function setVh(){
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', setVh);
+
+    // === Слайды ===
+    const slides = [
+      { img: "images/photo1.jpg", text: "С днём рождения!" },
+      { img: "images/photo2.jpg", text: "Пусть этот год будет счастливым" },
+      { img: "images/photo3.jpg", text: "И пусть рядом будут любимые люди" },
+      { img: "images/photo4.jpg", text: "Ты — невероятная/невероятный" },
+      { img: "images/photo5.jpg", text: "Обнимаю крепко" },
+      { img: "images/photo6.jpg", text: "И желаю самого лучшего" }
+    ];
+
+    // === Элементы ===
+    const music = document.getElementById("music");
+
+    const startScreen = document.getElementById("startScreen");
+    const slideScreen = document.getElementById("slideScreen");
+    const finalScreen = document.getElementById("finalScreen");
+
+    const startBtn = document.getElementById("startBtn");
+    const hint = document.getElementById("hint");
+
+    const slideImage = document.getElementById("slideImage");
+    const slideText = document.getElementById("slideText");
+    const progress = document.getElementById("progress");
+
+    const toggleSoundBtn = document.getElementById("toggleSoundBtn");
+
+    const fxCanvas = document.getElementById("fxCanvas");
+    const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // === Состояние ===
+    let started = false;
+    let index = 0;
+    let timer = null;
+
+    const totalTime = 30000;
+    const slideTime = Math.round(totalTime / slides.length);
+
+    function show(el){ el.classList.remove("hidden"); }
+    function hide(el){ el.classList.add("hidden"); }
+
+    function fadeInAudio(audio, ms = 900, target = 1.0){
+      audio.volume = 0.0;
+      const steps = 30;
+      let i = 0;
+      const t = setInterval(() => {
+        i++;
+        audio.volume = Math.min(target, (i/steps) * target);
+        if (i >= steps) clearInterval(t);
+      }, ms/steps);
+    }
+
+    function setSoundButton(){
+      toggleSoundBtn.textContent = music.muted ? "🔇 Звук" : "🔊 Звук";
+    }
+
+    async function preloadSlides(){
+      const tasks = slides.map(s => new Promise(res => {
+        const im = new Image();
+        im.onload = () => res(true);
+        im.onerror = () => res(false);
+        im.src = s.img;
+      }));
+      await Promise.all(tasks);
+    }
+
+    function renderSlide(i){
+      const s = slides[i];
+      progress.textContent = `${i+1} / ${slides.length}`;
+
+      slideImage.classList.add("fade");
+      setTimeout(() => {
+        slideImage.alt = s.text || "";
+        slideText.textContent = s.text || "";
+        slideImage.src = s.img;
+
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          slideImage.classList.remove("fade");
+        };
+        slideImage.onload = finish;
+        setTimeout(finish, 600);
+      }, 220);
+    }
+
+    function nextSlide(){
+      if (index >= slides.length){
+        endShow();
+        return;
+      }
+      renderSlide(index);
+      index++;
+      timer = setTimeout(nextSlide, slideTime);
+    }
+
+    function endShow(){
+      if (timer) clearTimeout(timer);
+      hide(slideScreen);
+      show(finalScreen);
+
+      if (!reduceMotion) startFinalFX();
+    }
+
+    async function startShow(){
+      if (started) return;
+      started = true;
+
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+
+      hint.textContent = "Загружаю фото…";
+
+      try{
+        music.muted = false;
+        setSoundButton();
+        await music.play();
+        fadeInAudio(music, 900, 1.0);
+      } catch (e){
+        hint.textContent = "Если звук не включился — нажми «🔊 Звук» позже.";
+      }
+
+      await preloadSlides();
+
+      hint.textContent = "";
+      hide(startScreen);
+      show(slideScreen);
+
+      index = 0;
+      nextSlide();
+    }
+
+    // === FX: конфетти + салют (canvas) ===
+    function startFinalFX(){
+      fxCanvas.classList.add("show");
+
+      const ctx = fxCanvas.getContext("2d");
+      let w = 0, h = 0, dpr = 1;
+
+      function resize(){
+        dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        w = Math.floor(window.innerWidth);
+        h = Math.floor(window.innerHeight);
+        fxCanvas.width = Math.floor(w * dpr);
+        fxCanvas.height = Math.floor(h * dpr);
+        fxCanvas.style.width = w + "px";
+        fxCanvas.style.height = h + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resize();
+      window.addEventListener("resize", resize);
+
+      const confetti = [];
+      const sparks = [];
+      const colors = ["#ff4d6d","#ff8fab","#ffd166","#06d6a0","#4cc9f0","#b5179e","#ffffff"];
+
+      function rand(min, max){ return Math.random() * (max - min) + min; }
+
+      // Конфетти
+      function spawnConfetti(count = 140){
+        for (let i=0;i<count;i++){
+          confetti.push({
+            x: rand(0, w),
+            y: rand(-h*0.2, h*0.2),
+            vx: rand(-0.6, 0.6),
+            vy: rand(1.2, 3.2),
+            size: rand(5, 10),
+            rot: rand(0, Math.PI*2),
+            vr: rand(-0.12, 0.12),
+            color: colors[(Math.random()*colors.length)|0],
+            life: rand(220, 360)
+          });
+        }
+      }
+
+      // Салют: взрыв искр
+      function spawnFirework(){
+        const cx = rand(w*0.18, w*0.82);
+        const cy = rand(h*0.12, h*0.45);
+        const base = colors[(Math.random()*colors.length)|0];
+        const n = (rand(40, 70))|0;
+
+        for (let i=0;i<n;i++){
+          const a = (i / n) * Math.PI * 2 + rand(-0.08, 0.08);
+          const sp = rand(2.2, 5.2);
+          sparks.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(a) * sp,
+            vy: Math.sin(a) * sp,
+            g: 0.06,
+            color: base,
+            life: rand(40, 70),
+            r: rand(1.2, 2.2)
+          });
+        }
+      }
+
+      spawnConfetti(160);
+      let lastFirework = 0;
+      let start = performance.now();
+
+      function tick(t){
+        const dt = Math.min(32, t - (tick._t || t));
+        tick._t = t;
+
+        ctx.clearRect(0,0,w,h);
+
+        // Конфетти
+        for (let i = confetti.length - 1; i >= 0; i--){
+          const p = confetti[i];
+          p.x += p.vx * dt * 0.06;
+          p.y += p.vy * dt * 0.06;
+          p.rot += p.vr * dt * 0.06;
+          p.life -= dt * 0.06;
+
+          // лёгкий "ветер"
+          p.vx += Math.sin((t/1000) + p.y*0.01) * 0.002;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.globalAlpha = Math.max(0, Math.min(1, p.life / 120));
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.6);
+          ctx.restore();
+
+          if (p.y > h + 30 || p.life <= 0) confetti.splice(i, 1);
+        }
+
+        // Салют (искры)
+        for (let i = sparks.length - 1; i >= 0; i--){
+          const s = sparks[i];
+          s.vy += s.g * dt * 0.06;
+          s.x += s.vx * dt * 0.06;
+          s.y += s.vy * dt * 0.06;
+          s.life -= dt * 0.06;
+
+          ctx.beginPath();
+          ctx.globalAlpha = Math.max(0, Math.min(1, s.life / 25));
+          ctx.fillStyle = s.color;
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+          ctx.fill();
+
+          if (s.life <= 0) sparks.splice(i, 1);
+        }
+
+        ctx.globalAlpha = 1;
+
+        // запуск салюта каждые ~900мс первые 7 секунд
+        if (t - start < 7000 && t - lastFirework > 900){
+          lastFirework = t;
+          spawnFirework();
+        }
+
+        // подсыпать конфетти первые 6 секунд
+        if (t - start < 6000 && confetti.length < 220){
+          spawnConfetti(18);
+        }
+
+        // остановка через 10 секунд (оставим немного конфетти)
+        if (t - start < 10000 || confetti.length > 0 || sparks.length > 0){
+          requestAnimationFrame(tick);
+        } else {
+          fxCanvas.classList.remove("show");
+          ctx.clearRect(0,0,w,h);
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // === События ===
+    startBtn.addEventListener("click", startShow);
+
+    toggleSoundBtn.addEventListener("click", async () => {
+      music.muted = !music.muted;
+      setSoundButton();
+      if (!music.muted){
+        try{ await music.play(); } catch(e){}
+      }
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden){
+        try{ music.pause(); } catch(e){}
+      }
+    });
+
+    setSoundButton();
+  </script>
+</body>
+</html>
